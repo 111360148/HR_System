@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>員工資料管理系統</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        h1 {
+            color: #007bff;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .table th, .table td {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container my-4">
+        <h1 class="text-center">員工資料管理系統</h1>
+
+        <!-- 表單用來新增員工 -->
+        <form id="employeeForm" onsubmit="createEmployee(event)">
+            <div class="form-group">
+                <label for="name">姓名</label>
+                <input type="text" class="form-control" id="name" required>
+            </div>
+            <div class="form-group">
+                <label for="department">部門</label>
+                <input type="text" class="form-control" id="department" required>
+            </div>
+            <div class="form-group">
+                <label for="position">職稱</label>
+                <input type="text" class="form-control" id="position" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">電話</label>
+                <input type="text" class="form-control" placeholder="請依照 0900-123456 的格式輸入" id="phone" required>
+            </div>
+            <div class="form-group">
+                <label for="email">電子郵件</label>
+                <input type="email" class="form-control" id="email" required>
+            </div>
+            <button type="submit" class="btn btn-primary">新增員工</button>
+        </form>
+
+        <hr>
+
+        <!-- 批量上傳Excel -->
+        <h4>上傳 / 匯出員工資料 (Excel文件)</h4>
+
+        <div class="row align-items-end my-4">
+            <!-- 上傳模式 -->
+            <div class="col-auto">
+                <label for="uploadMode" class="form-label">上傳模式：</label>
+                <select id="uploadMode" class="form-control">
+                    <option value="add">新增資料</option>
+                    <option value="overwrite">覆蓋（將刪除所有資料）</option>
+                </select>
+            </div>
+            
+            <!-- 上傳檔案 -->
+            <div class="col-auto">
+                <label for="excelUpload" class="form-label">選擇 Excel 檔案：</label>
+                <input type="file" id="excelUpload" class="form-control" accept=".xlsx,.xls">
+            </div>
+            
+            <!-- 上傳按鈕 -->
+            <div class="col-auto">
+                <button class="btn btn-success" onclick="uploadExcel()">確定上傳 Excel 文件</button>
+            </div>
+        
+            <!-- 匯出 Excel 按鈕 -->
+            <div class="col-auto">
+                <button class="btn btn-success mt-3" onclick="exportToExcel()">匯出員工資料為 Excel 文件</button>
+            </div>
+        </div>
+        
+        <hr>
+
+        <!-- 查詢框 -->
+        <div class="search-box my-4">
+            <!-- 第一列: 查詢員工 -->
+            <div>
+                <label for="search" class="h4">查詢員工</label>
+            </div>
+
+            <!-- 第二列: 下拉選單和輸入框 -->
+            <div class="d-flex align-items-center">
+                <select id="searchCriteria" class="form-control mr-2">
+                    <option value="name">姓名</option>
+                    <option value="position">職稱</option>
+                    <option value="department">部門</option>
+                    <option value="phone">電話</option>
+                    <option value="email">電子郵件</option>
+                </select>
+                <input type="text" id="search" class="form-control" placeholder="輸入查詢條件" oninput="searchEmployees()">
+            </div>
+        </div>
+
+        <hr>
+
+        <!-- 員工資料表格 -->
+        <table class="table table-bordered table-striped mt-4" id="employeeTable">
+            <thead>
+                <tr>
+                    <th>姓名</th>
+                    <th>部門</th>
+                    <th>職稱</th>
+                    <th>電話</th>
+                    <th>電子郵件</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="employeeList">
+                <!-- 員工資料將在這裡顯示 -->
+            </tbody>
+        </table>
+
+        
+    </div>
+
+    <!-- 修改員工資料的 Modal -->
+    <div class="modal" tabindex="-1" id="editEmployeeModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改員工資料</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="editName">姓名</label>
+                        <input type="text" class="form-control" id="editName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDepartment">部門</label>
+                        <input type="text" class="form-control" id="editDepartment" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPosition">職稱</label>
+                        <input type="text" class="form-control" id="editPosition" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPhone">電話</label>
+                        <input type="text" class="form-control" id="editPhone" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editEmail">電子郵件</label>
+                        <input type="email" class="form-control" id="editEmail" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEditedEmployee()">儲存變更</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function exportToExcel() {
+            // 獲取表格資料
+            const table = document.getElementById('employeeTable');
+            const rows = table.querySelectorAll('tr');
+            
+            let data = [];
+    
+            // 提取表頭作為標題（只保留前五項）
+            const headers = [];
+            rows[0].querySelectorAll('th').forEach((header, index) => {
+                // 只保留前五列（姓名、部門、職稱、電話、電子郵件）
+                if (index < 5) {
+                    headers.push(header.innerText);
+                }
+            });
+            data.push(headers);
+    
+            // 提取每行資料（只保留前五列）
+            rows.forEach((row, rowIndex) => {
+                if (rowIndex > 0) {
+                    const cells = row.querySelectorAll('td');
+                    const rowData = [];
+                    for (let i = 0; i < 5; i++) {
+                        rowData.push(cells[i].innerText);  // 只取前五列資料
+                    }
+                    data.push(rowData);
+                }
+            });
+    
+            // 使用 xlsx 生成 Excel 文件
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "員工資料");
+    
+            // 觸發下載
+            XLSX.writeFile(wb, "員工資料.xlsx");
+        }
+    </script>
+    
+    
+    <script>
+        let allEmployees = [];
+        let currentEmployeeId = null;
+
+        // 獲取員工資料
+        async function fetchEmployees() {
+            const response = await fetch('/employees');
+            const employees = await response.json();
+            allEmployees = employees;
+            displayEmployees(employees);
+        }
+
+        // 顯示員工資料（以表格形式）
+        function displayEmployees(employees) {
+            const employeeList = document.getElementById('employeeList');
+            employeeList.innerHTML = '';
+            employees.forEach(employee => {
+                const tr = document.createElement('tr');
+                tr.dataset.employeeId = employee.id;
+
+                const nameCell = document.createElement('td');
+                nameCell.textContent = employee.name;
+
+                const departmentCell = document.createElement('td');
+                departmentCell.textContent = employee.department;
+
+                const positionCell = document.createElement('td');
+                positionCell.textContent = employee.position;
+
+                const phoneCell = document.createElement('td');
+                phoneCell.textContent = employee.phone;
+
+                const emailCell = document.createElement('td');
+                emailCell.textContent = employee.email;
+
+                const actionsCell = document.createElement('td');
+                const buttonGroup = document.createElement('div');
+                buttonGroup.className = 'btn-group';
+
+                const editButton = document.createElement('button');
+                editButton.textContent = '修改';
+                editButton.className = 'btn btn-warning btn-sm';
+                editButton.onclick = () => editEmployee(employee);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = '刪除';
+                deleteButton.className = 'btn btn-danger btn-sm';
+                deleteButton.onclick = () => deleteEmployee(employee.id);
+
+                buttonGroup.appendChild(editButton);
+                buttonGroup.appendChild(deleteButton);
+                actionsCell.appendChild(buttonGroup);
+
+                tr.appendChild(nameCell);
+                tr.appendChild(departmentCell);
+                tr.appendChild(positionCell);
+                tr.appendChild(phoneCell);
+                tr.appendChild(emailCell);
+                tr.appendChild(actionsCell);
+
+                employeeList.appendChild(tr);
+            });
+        }
+
+        // 創建新員工
+        async function createEmployee(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const department = document.getElementById('department').value;
+            const position = document.getElementById('position').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+
+            const response = await fetch('/employees', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, department, position, phone, email })
+            });
+
+            if (response.ok) {
+                const newEmployee = await response.json();
+                alert(`新增員工成功: ${newEmployee.name}`);
+                fetchEmployees();
+                document.getElementById('employeeForm').reset();
+            } else {
+                alert('新增員工失敗');
+            }
+        }
+
+        // 刪除員工
+        async function deleteEmployee(employeeId) {
+            const response = await fetch(`/employees/${employeeId}`, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                alert('刪除員工成功');
+                fetchEmployees();
+            } else {
+                alert('刪除員工失敗');
+            }
+        }
+
+        // 修改員工資料
+        function editEmployee(employee) {
+            // 顯示 Modal 並填入當前員工資料
+            currentEmployeeId = employee.id;
+            document.getElementById('editName').value = employee.name;
+            document.getElementById('editDepartment').value = employee.department;
+            document.getElementById('editPosition').value = employee.position;
+            document.getElementById('editPhone').value = employee.phone;
+            document.getElementById('editEmail').value = employee.email;
+
+            $('#editEmployeeModal').modal('show');
+        }
+
+        // 儲存修改後的員工資料
+        async function saveEditedEmployee() {
+            const name = document.getElementById('editName').value;
+            const department = document.getElementById('editDepartment').value;
+            const position = document.getElementById('editPosition').value;
+            const phone = document.getElementById('editPhone').value;
+            const email = document.getElementById('editEmail').value;
+
+            const response = await fetch(`/employees/${currentEmployeeId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, department, position, phone, email })
+            });
+            // 檢查必填欄位是否填寫
+            if (!name || !department || !position || !phone || !email) {
+                alert("請填寫所有欄位！");
+                return; // 結束函式，不繼續執行
+            }
+
+            if (response.ok) {
+                alert('修改成功');
+                fetchEmployees();
+                $('#editEmployeeModal').modal('hide');
+            } else {
+                alert('修改失敗');
+            }
+        }
+
+        async function uploadExcel() {
+            const fileInput = document.getElementById('excelUpload');
+            const mode = document.getElementById('uploadMode').value;
+
+            if (mode === 'overwrite') {
+                const confirmed = confirm("⚠️ 你即將刪除所有現有資料，更換成新的EXCEL資料內容，是否繼續？");
+                if (!confirmed) return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            formData.append("mode", mode);
+
+            const response = await fetch('/upload_excel', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                alert('上傳成功');
+                fetchEmployees();
+            } else {
+                alert('上傳失敗');
+            }
+        }
+
+
+
+        // 查詢員工
+        function searchEmployees() {
+            const searchTerm = document.getElementById('search').value.toLowerCase();
+            const searchCriteria = document.getElementById('searchCriteria').value;
+
+            const rows = document.querySelectorAll('#employeeTable tbody tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                let match = false;
+
+                // 根據選擇的查詢條件來判斷是否匹配
+                switch (searchCriteria) {
+                    case 'name':
+                        match = cells[0].innerText.toLowerCase().includes(searchTerm); // 姓名
+                        break;
+                    case 'position':
+                        match = cells[2].innerText.toLowerCase().includes(searchTerm); // 職位
+                        break;
+                    case 'department':
+                        match = cells[1].innerText.toLowerCase().includes(searchTerm); // 部門
+                        break;
+                    case 'phone':
+                        match = cells[3].innerText.toLowerCase().includes(searchTerm); // 電話
+                        break;
+                    case 'email':
+                        match = cells[4].innerText.toLowerCase().includes(searchTerm); // 電子郵件
+                        break;
+                }
+
+                if (match) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // 頁面加載時獲取員工資料
+        window.onload = fetchEmployees;
+    </script>
+</body>
+</html>
