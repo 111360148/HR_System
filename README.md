@@ -18,7 +18,7 @@
 ### 1. 將程式從 GitHub 克隆下來
 ```bash
 git clone https://github.com/111360148/HR_System.git
-cd HR_System
+cd HR_System/hr_system
 ```
 
 ### 2. 使用 Docker Compose 啟動系統
