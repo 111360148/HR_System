@@ -28,4 +28,4 @@ docker-compose up --build
 
 ### 3. 開啟瀏覽器，訪問系統
 - 前台網頁系統： http://localhost:8501
-- FastAPI OpenAPI API 文件：http://localhost:8000/docs
+- FastAPI OpenAPI API 文件： http://127.0.0.1:8000/docs
