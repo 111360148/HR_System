@@ -1,3 +1,9 @@
+# 專案檔案結構
+- code1.py：第一題反轉數字的程式碼。
+- code2.py：第二題費氏數列的程式碼。
+- hr_system 資料夾：這個資料夾包含員工管理系統的主程式。 
+
+
 # 員工管理系統 (Employee Management System)
 
 ## 專案簡介
